@@ -6,6 +6,7 @@ import com.ms.cardmanagement.domain.TipoCartao;
 import com.ms.cardmanagement.dto.CartaoResponse;
 import com.ms.cardmanagement.dto.CriarCartaoRequest;
 import com.ms.cardmanagement.event.CartaoAtivadoEvent;
+import com.ms.cardmanagement.event.CartaoCanceladoEvent;
 import com.ms.cardmanagement.event.CartaoCriadoEvent;
 import com.ms.cardmanagement.exception.CartaoException;
 import com.ms.cardmanagement.producer.CartaoProducer;
@@ -29,105 +30,124 @@ public class CartaoServiceImpl implements CartaoService {
 
     @Override
     public List<CartaoResponse> criarCartoes(CriarCartaoRequest request) {
-        log.info("Iniciando criação de cartões para CPF: {}", request.getCpf());
+        log.info("Criando cartões para CPF: {}", request.getCpf());
 
-        CartaoEntity cartaoEntityFisico = new CartaoEntity();
-        cartaoEntityFisico.setCpf(request.getCpf());
-        cartaoEntityFisico.setNomeImpresso(request.getNomeImpresso());
-        cartaoEntityFisico.setProduto(request.getProduto());
-        cartaoEntityFisico.setSubproduto(request.getSubproduto());
-        cartaoEntityFisico.setTipoCartao(TipoCartao.FISICO);
-        cartaoEntityFisico.setSituacao(SituacaoCartao.PENDENTE_ATIVACAO);
-        cartaoEntityFisico.setDataCriacao(LocalDateTime.now());
+        CartaoEntity cartaoFisico = criarCartao(request, TipoCartao.FISICO, SituacaoCartao.PENDENTE_ATIVACAO);
+        CartaoEntity cartaoOnline = criarCartao(request, TipoCartao.ONLINE, SituacaoCartao.ATIVO);
 
-        CartaoEntity cartaoEntityOnline = new CartaoEntity();
-        cartaoEntityOnline.setCpf(request.getCpf());
-        cartaoEntityOnline.setNomeImpresso(request.getNomeImpresso());
-        cartaoEntityOnline.setProduto(request.getProduto());
-        cartaoEntityOnline.setSubproduto(request.getSubproduto());
-        cartaoEntityOnline.setTipoCartao(TipoCartao.ONLINE);
-        cartaoEntityOnline.setSituacao(SituacaoCartao.ATIVO);
-        cartaoEntityOnline.setDataCriacao(LocalDateTime.now());
+        List<CartaoEntity> cartoesSalvos = cartaoRepository.saveAll(List.of(cartaoFisico, cartaoOnline));
+        log.info("Cartões salvos: {}", cartoesSalvos.size());
 
-        List<CartaoEntity> cartoesSalvos = cartaoRepository.saveAll(List.of(cartaoEntityFisico, cartaoEntityOnline));
-        log.info("Cartões salvos com sucesso no banco. Quantidade: {}", cartoesSalvos.size());
-
-        cartoesSalvos.forEach(cartaoEntity -> {
-            CartaoCriadoEvent event = toEvent(cartaoEntity);
-            cartaoProducer.publicarCartaoCriado(event);
-            log.info("Evento publicado para cartão ID {} - Tipo: {}", cartaoEntity.getId(), cartaoEntity.getTipoCartao());
+        cartoesSalvos.forEach(cartao -> {
+            cartaoProducer.publicarCartaoCriado(toEvent(cartao));
+            log.info("Evento CartaoCriadoEvent publicado - ID: {}, Tipo: {}", cartao.getId(), cartao.getTipoCartao());
         });
 
-        return cartoesSalvos.stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        return cartoesSalvos.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Override
     public CartaoResponse ativarCartao(Long id) {
-        log.info("Iniciando ativação do cartão físico ID: {}", id);
-        CartaoEntity cartaoEntity = cartaoRepository.findById(id)
-                .orElseThrow(() -> new CartaoException("Cartão não encontrado para o ID: " + id));
+        log.info("Ativando cartão físico ID: {}", id);
+        CartaoEntity cartao = cartaoRepository.findById(id)
+                .orElseThrow(() -> new CartaoException("Cartão não encontrado - ID: " + id));
 
-        if (cartaoEntity.getTipoCartao() != TipoCartao.FISICO) {
-            log.warn("Tentativa de ativar cartão que não é físico. ID: {}, Tipo: {}", id, cartaoEntity.getTipoCartao());
-            throw new CartaoException("Só é permitido ativar cartão do tipo FÍSICO.");
+        if (cartao.getTipoCartao() != TipoCartao.FISICO) {
+            throw new CartaoException("Apenas cartões FÍSICOS podem ser ativados.");
         }
 
-        if (cartaoEntity.getSituacao() != SituacaoCartao.PENDENTE_ATIVACAO) {
-            log.warn("Tentativa de ativar cartão que não está pendente. ID: {}, Situação: {}", id, cartaoEntity.getSituacao());
-            throw new CartaoException("Cartão deve estar com status PENDENTE_ATIVACAO para ativação.");
+        if (cartao.getSituacao() != SituacaoCartao.PENDENTE_ATIVACAO) {
+            throw new CartaoException("Cartão deve estar com status PENDENTE_ATIVACAO.");
         }
 
-        cartaoEntity.setSituacao(SituacaoCartao.ATIVO);
-        cartaoEntity.setDataAtualizacao(LocalDateTime.now()); // precisa ter esse campo na entidade
-        CartaoEntity cartaoEntityAtivado = cartaoRepository.save(cartaoEntity);
-        log.info("Cartão físico ID: {} ativado com sucesso.", id);
+        cartao.setSituacao(SituacaoCartao.ATIVO);
+        cartao.setDataAtualizacao(LocalDateTime.now());
+        CartaoEntity atualizado = cartaoRepository.save(cartao);
 
-        CartaoAtivadoEvent event = toAtivadoEvent(cartaoEntityAtivado);
-        cartaoProducer.publicarCartaoAtivado(event);
-        log.info("Evento CartaoAtivadoEvent publicado para cartão ID: {}", id);
+        cartaoProducer.publicarCartaoAtivado(toAtivadoEvent(atualizado));
+        log.info("Cartão ativado com sucesso - ID: {}", id);
 
-        return toResponse(cartaoEntityAtivado);
+        return toResponse(atualizado);
     }
 
-    private CartaoResponse toResponse(CartaoEntity cartaoEntity) {
+    @Override
+    public void cancelarCartao(Long id) {
+        log.info("Cancelando cartão ID: {}", id);
+        CartaoEntity cartao = cartaoRepository.findById(id)
+                .orElseThrow(() -> new CartaoException("Cartão não encontrado - ID: " + id));
+
+        if (cartao.getSituacao() != SituacaoCartao.ATIVO) {
+            throw new CartaoException("Somente cartões ATIVOS podem ser cancelados.");
+        }
+
+        cartao.setSituacao(SituacaoCartao.CANCELADO);
+        cartao.setDataAtualizacao(LocalDateTime.now());
+        cartaoRepository.save(cartao);
+
+        cartaoProducer.publicarCartaoCancelado(toCanceladoEvent(cartao));
+        log.info("Cartão cancelado com sucesso - ID: {}", id);
+    }
+
+    // -------- Métodos auxiliares --------
+
+    private CartaoEntity criarCartao(CriarCartaoRequest request, TipoCartao tipo, SituacaoCartao situacao) {
+        CartaoEntity cartao = new CartaoEntity();
+        cartao.setCpf(request.getCpf());
+        cartao.setNomeImpresso(request.getNomeImpresso());
+        cartao.setProduto(request.getProduto());
+        cartao.setSubproduto(request.getSubproduto());
+        cartao.setTipoCartao(tipo);
+        cartao.setSituacao(situacao);
+        cartao.setDataCriacao(LocalDateTime.now());
+        return cartao;
+    }
+
+    private CartaoResponse toResponse(CartaoEntity cartao) {
         return CartaoResponse.builder()
-                .id(cartaoEntity.getId())
-                .cpf(cartaoEntity.getCpf())
-                .nomeImpresso(cartaoEntity.getNomeImpresso())
-                .produto(cartaoEntity.getProduto())
-                .subproduto(cartaoEntity.getSubproduto())
-                .tipoCartao(cartaoEntity.getTipoCartao())
-                .situacao(cartaoEntity.getSituacao())
-                .dataCriacao(cartaoEntity.getDataCriacao())
+                .id(cartao.getId())
+                .cpf(cartao.getCpf())
+                .nomeImpresso(cartao.getNomeImpresso())
+                .produto(cartao.getProduto())
+                .subproduto(cartao.getSubproduto())
+                .tipoCartao(cartao.getTipoCartao())
+                .situacao(cartao.getSituacao())
+                .dataCriacao(cartao.getDataCriacao())
                 .build();
     }
 
-    private CartaoCriadoEvent toEvent(CartaoEntity cartaoEntity) {
+    private CartaoCriadoEvent toEvent(CartaoEntity cartao) {
         return new CartaoCriadoEvent(
-                cartaoEntity.getId(),
-                cartaoEntity.getCpf(),
-                cartaoEntity.getNomeImpresso(),
-                cartaoEntity.getProduto(),
-                cartaoEntity.getSubproduto(),
-                cartaoEntity.getTipoCartao().name(),
-                cartaoEntity.getSituacao().name(),
-                cartaoEntity.getDataCriacao()
+                cartao.getId(),
+                cartao.getCpf(),
+                cartao.getNomeImpresso(),
+                cartao.getProduto(),
+                cartao.getSubproduto(),
+                cartao.getTipoCartao().name(),
+                cartao.getSituacao().name(),
+                cartao.getDataCriacao()
         );
     }
 
-    private CartaoAtivadoEvent toAtivadoEvent(CartaoEntity cartaoEntity) {
+    private CartaoAtivadoEvent toAtivadoEvent(CartaoEntity cartao) {
         return new CartaoAtivadoEvent(
-                cartaoEntity.getId(),
-                cartaoEntity.getCpf(),
-                cartaoEntity.getNomeImpresso(),
-                cartaoEntity.getProduto(),
-                cartaoEntity.getSubproduto(),
-                cartaoEntity.getTipoCartao().name(),
-                cartaoEntity.getSituacao().name(),
-                cartaoEntity.getDataCriacao(),
-                cartaoEntity.getDataAtualizacao()
+                cartao.getId(),
+                cartao.getCpf(),
+                cartao.getNomeImpresso(),
+                cartao.getProduto(),
+                cartao.getSubproduto(),
+                cartao.getTipoCartao().name(),
+                cartao.getSituacao().name(),
+                cartao.getDataCriacao(),
+                cartao.getDataAtualizacao()
+        );
+    }
+
+    private CartaoCanceladoEvent toCanceladoEvent(CartaoEntity cartao) {
+        return new CartaoCanceladoEvent(
+                cartao.getId(),
+                cartao.getCpf(),
+                cartao.getTipoCartao().name(),
+                cartao.getDataAtualizacao()
         );
     }
 }

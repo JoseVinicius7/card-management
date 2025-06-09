@@ -27,4 +27,10 @@ public class CartaoController {
         cartaoService.ativarCartao(id);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/{id}/cancelar")
+    public ResponseEntity<Void> cancelarCartao(@PathVariable Long id) {
+        cartaoService.cancelarCartao(id);
+        return ResponseEntity.ok().build();
+    }
 }

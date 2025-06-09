@@ -9,4 +9,6 @@ public interface CartaoService {
     List<CartaoResponse> criarCartoes(CriarCartaoRequest request);
 
     CartaoResponse ativarCartao(Long id);
+
+    void cancelarCartao(Long id);
 }

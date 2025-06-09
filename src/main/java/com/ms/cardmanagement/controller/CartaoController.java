@@ -21,4 +21,10 @@ public class CartaoController {
         List<CartaoResponse> cartoesCriados = cartaoService.criarCartoes(request);
         return ResponseEntity.ok(cartoesCriados);
     }
+
+    @PostMapping("/{id}/ativar")
+    public ResponseEntity<Void> ativarCartao(@PathVariable Long id) {
+        cartaoService.ativarCartao(id);
+        return ResponseEntity.ok().build();
+    }
 }

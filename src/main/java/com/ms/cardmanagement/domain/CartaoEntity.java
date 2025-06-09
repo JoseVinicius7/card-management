@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Cartao {
+public class CartaoEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,4 +32,6 @@ public class Cartao {
     private SituacaoCartao situacao;
 
     private LocalDateTime dataCriacao;
+
+    private LocalDateTime dataAtualizacao;
 }

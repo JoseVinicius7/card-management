@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface CartaoService {
     List<CartaoResponse> criarCartoes(CriarCartaoRequest request);
+
+    CartaoResponse ativarCartao(Long id);
 }

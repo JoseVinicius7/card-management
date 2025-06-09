@@ -9,6 +9,7 @@ import com.ms.cardmanagement.event.CartaoAtivadoEvent;
 import com.ms.cardmanagement.event.CartaoCanceladoEvent;
 import com.ms.cardmanagement.event.CartaoCriadoEvent;
 import com.ms.cardmanagement.exception.CartaoException;
+import com.ms.cardmanagement.mapper.CartaoMapper;
 import com.ms.cardmanagement.producer.CartaoProducer;
 import com.ms.cardmanagement.repository.CartaoRepository;
 import com.ms.cardmanagement.service.CartaoService;
@@ -27,6 +28,7 @@ public class CartaoServiceImpl implements CartaoService {
 
     private final CartaoRepository cartaoRepository;
     private final CartaoProducer cartaoProducer;
+    private final CartaoMapper cartaoMapper;
 
     @Override
     public List<CartaoResponse> criarCartoes(CriarCartaoRequest request) {
@@ -42,7 +44,7 @@ public class CartaoServiceImpl implements CartaoService {
         cartoesSalvos.forEach(this::publicarCartaoCriadoEvent);
 
         return cartoesSalvos.stream()
-                .map(this::toResponse)
+                .map(cartaoMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -59,7 +61,7 @@ public class CartaoServiceImpl implements CartaoService {
     }
 
     private void publicarCartaoCriadoEvent(CartaoEntity cartaoEntity) {
-        CartaoCriadoEvent event = toEvent(cartaoEntity);
+        CartaoCriadoEvent event = cartaoMapper.toCriadoEvent(cartaoEntity);
         cartaoProducer.publicarCartaoCriado(event);
         log.info("Evento publicado para cartão ID {} - Tipo: {}", cartaoEntity.getId(), cartaoEntity.getTipoCartao());
     }
@@ -78,11 +80,11 @@ public class CartaoServiceImpl implements CartaoService {
         CartaoEntity cartaoAtivado = cartaoRepository.save(cartaoEntity);
         log.info("Cartão físico ID: {} ativado com sucesso.", id);
 
-        CartaoAtivadoEvent event = toAtivadoEvent(cartaoAtivado);
+        CartaoAtivadoEvent event = cartaoMapper.toAtivadoEvent(cartaoEntity);
         cartaoProducer.publicarCartaoAtivado(event);
         log.info("Evento CartaoAtivadoEvent publicado para cartão ID: {}", id);
 
-        return toResponse(cartaoAtivado);
+        return cartaoMapper.toResponse(cartaoAtivado);
     }
 
     private CartaoEntity buscarCartaoOuFalhar(Long id) {
@@ -125,44 +127,4 @@ public class CartaoServiceImpl implements CartaoService {
         log.info("Cartão ID {} cancelado com sucesso", cartao.getId());
     }
 
-    private CartaoResponse toResponse(CartaoEntity cartaoEntity) {
-        return new CartaoResponse(
-                cartaoEntity.getId(),
-                cartaoEntity.getCpf(),
-                cartaoEntity.getNomeImpresso(),
-                cartaoEntity.getProduto(),
-                cartaoEntity.getSubproduto(),
-                cartaoEntity.getTipoCartao(),
-                cartaoEntity.getSituacao(),
-                cartaoEntity.getDataCriacao()
-        );
-    }
-
-
-    private CartaoCriadoEvent toEvent(CartaoEntity cartaoEntity) {
-        return new CartaoCriadoEvent(
-                cartaoEntity.getId(),
-                cartaoEntity.getCpf(),
-                cartaoEntity.getNomeImpresso(),
-                cartaoEntity.getProduto(),
-                cartaoEntity.getSubproduto(),
-                cartaoEntity.getTipoCartao().name(),
-                cartaoEntity.getSituacao().name(),
-                cartaoEntity.getDataCriacao()
-        );
-    }
-
-    private CartaoAtivadoEvent toAtivadoEvent(CartaoEntity cartaoEntity) {
-        return new CartaoAtivadoEvent(
-                cartaoEntity.getId(),
-                cartaoEntity.getCpf(),
-                cartaoEntity.getNomeImpresso(),
-                cartaoEntity.getProduto(),
-                cartaoEntity.getSubproduto(),
-                cartaoEntity.getTipoCartao().name(),
-                cartaoEntity.getSituacao().name(),
-                cartaoEntity.getDataCriacao(),
-                cartaoEntity.getDataAtualizacao()
-        );
-    }
 }

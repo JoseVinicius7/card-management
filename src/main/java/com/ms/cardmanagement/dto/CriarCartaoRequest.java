@@ -1,9 +1,13 @@
 package com.ms.cardmanagement.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 @Data
+@AllArgsConstructor
 public class CriarCartaoRequest {
 
     @NotBlank

@@ -34,4 +34,6 @@ public class CartaoEntity {
     private LocalDateTime dataCriacao;
 
     private LocalDateTime dataAtualizacao;
+
+    private LocalDateTime dataAtivacao;
 }

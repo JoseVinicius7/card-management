@@ -1,0 +1,24 @@
+package com.ms.cardmanagement.controller;
+
+import com.ms.cardmanagement.dto.CriarCartaoRequest;
+import com.ms.cardmanagement.dto.CartaoResponse;
+import com.ms.cardmanagement.service.CartaoService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/cartoes")
+@RequiredArgsConstructor
+public class CartaoController {
+
+    private final CartaoService cartaoService;
+
+    @PostMapping
+    public ResponseEntity<List<CartaoResponse>> criarCartoes(@RequestBody CriarCartaoRequest request) {
+        List<CartaoResponse> cartoesCriados = cartaoService.criarCartoes(request);
+        return ResponseEntity.ok(cartoesCriados);
+    }
+}

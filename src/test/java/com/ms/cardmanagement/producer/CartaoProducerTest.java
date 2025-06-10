@@ -11,13 +11,21 @@ import static org.mockito.Mockito.*;
 
 class CartaoProducerTest {
 
-    private KafkaTemplate<String, Object> kafkaTemplate;
+    private KafkaTemplate<String, CartaoCriadoEvent> cartaoCriadoKafkaTemplate;
+    private KafkaTemplate<String, CartaoAtivadoEvent> cartaoAtivadoKafkaTemplate;
+    private KafkaTemplate<String, CartaoCanceladoEvent> cartaoCanceladoKafkaTemplate;
     private CartaoProducer cartaoProducer;
 
     @BeforeEach
     void setup() {
-        kafkaTemplate = mock(KafkaTemplate.class);
-        cartaoProducer = new CartaoProducer(kafkaTemplate);
+        cartaoCriadoKafkaTemplate = mock(KafkaTemplate.class);
+        cartaoAtivadoKafkaTemplate = mock(KafkaTemplate.class);
+        cartaoCanceladoKafkaTemplate = mock(KafkaTemplate.class);
+        cartaoProducer = new CartaoProducer(
+            cartaoCriadoKafkaTemplate,
+            cartaoAtivadoKafkaTemplate,
+            cartaoCanceladoKafkaTemplate
+        );
     }
 
     @Test
@@ -26,7 +34,8 @@ class CartaoProducerTest {
 
         cartaoProducer.publicarCartaoCriado(event);
 
-        verify(kafkaTemplate, times(1)).send(eq("cartao.criado"), eq(event));
+        verify(cartaoCriadoKafkaTemplate, times(1)).send(eq("cartao.criado"), eq(event));
+        verifyNoInteractions(cartaoAtivadoKafkaTemplate, cartaoCanceladoKafkaTemplate);
     }
 
     @Test
@@ -35,7 +44,8 @@ class CartaoProducerTest {
 
         cartaoProducer.publicarCartaoAtivado(event);
 
-        verify(kafkaTemplate, times(1)).send(eq("cartao.ativado"), eq(event));
+        verify(cartaoAtivadoKafkaTemplate, times(1)).send(eq("cartao.ativado"), eq(event));
+        verifyNoInteractions(cartaoCriadoKafkaTemplate, cartaoCanceladoKafkaTemplate);
     }
 
     @Test
@@ -44,6 +54,7 @@ class CartaoProducerTest {
 
         cartaoProducer.publicarCartaoCancelado(event);
 
-        verify(kafkaTemplate, times(1)).send(eq("cartao.cancelado"), eq(event));
+        verify(cartaoCanceladoKafkaTemplate, times(1)).send(eq("cartao.cancelado"), eq(event));
+        verifyNoInteractions(cartaoCriadoKafkaTemplate, cartaoAtivadoKafkaTemplate);
     }
 }

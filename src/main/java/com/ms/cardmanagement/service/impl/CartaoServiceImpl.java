@@ -9,6 +9,7 @@ import com.ms.cardmanagement.event.CartaoAtivadoEvent;
 import com.ms.cardmanagement.event.CartaoCanceladoEvent;
 import com.ms.cardmanagement.event.CartaoCriadoEvent;
 import com.ms.cardmanagement.exception.CartaoException;
+import com.ms.cardmanagement.exception.ErrorCode;
 import com.ms.cardmanagement.mapper.CartaoMapper;
 import com.ms.cardmanagement.producer.CartaoProducer;
 import com.ms.cardmanagement.repository.CartaoRepository;
@@ -89,18 +90,18 @@ public class CartaoServiceImpl implements CartaoService {
 
     private CartaoEntity buscarCartaoOuFalhar(Long id) {
         return cartaoRepository.findById(id)
-                .orElseThrow(() -> new CartaoException("Cartão não encontrado para o ID: " + id));
+                .orElseThrow(() -> new CartaoException(ErrorCode.CARTAO_NAO_ENCONTRADO));
     }
 
     private void validarCartaoParaAtivacao(CartaoEntity cartao) {
         if (cartao.getTipoCartao() != TipoCartao.FISICO) {
             log.warn("Tentativa de ativar cartão que não é físico. ID: {}, Tipo: {}", cartao.getId(), cartao.getTipoCartao());
-            throw new CartaoException("Só é permitido ativar cartão do tipo FÍSICO.");
+            throw new CartaoException(ErrorCode.ATIVACAO_INVALIDA);
         }
 
         if (cartao.getSituacao() != SituacaoCartao.PENDENTE_ATIVACAO) {
             log.warn("Tentativa de ativar cartão que não está pendente. ID: {}, Situação: {}", cartao.getId(), cartao.getSituacao());
-            throw new CartaoException("Cartão deve estar com status PENDENTE_ATIVACAO para ativação.");
+            throw new CartaoException(ErrorCode.ATIVACAO_INVALIDA);
         }
     }
 
@@ -109,7 +110,7 @@ public class CartaoServiceImpl implements CartaoService {
         CartaoEntity cartao = buscarCartaoOuFalhar(id);
 
         if (cartao.getSituacao() != SituacaoCartao.ATIVO) {
-            throw new CartaoException("Somente cartões ATIVOS podem ser cancelados.");
+            throw new CartaoException(ErrorCode.CANCELAMENTO_INVALIDO);
         }
 
         cartao.setSituacao(SituacaoCartao.CANCELADO);

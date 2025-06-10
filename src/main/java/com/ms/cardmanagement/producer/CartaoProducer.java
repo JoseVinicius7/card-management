@@ -11,22 +11,23 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CartaoProducer {
 
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaTemplate<String, CartaoCriadoEvent> cartaoCriadoKafkaTemplate;
+    private final KafkaTemplate<String, CartaoAtivadoEvent> cartaoAtivadoKafkaTemplate;
+    private final KafkaTemplate<String, CartaoCanceladoEvent> cartaoCanceladoKafkaTemplate;
 
     private static final String TOPICO_CARTAO_CRIADO = "cartao.criado";
     private static final String TOPICO_CARTAO_ATIVADO = "cartao.ativado";
     private static final String TOPICO_CARTAO_CANCELADO = "cartao.cancelado";
 
-
     public void publicarCartaoCriado(CartaoCriadoEvent event) {
-        kafkaTemplate.send(TOPICO_CARTAO_CRIADO, event);
+        cartaoCriadoKafkaTemplate.send(TOPICO_CARTAO_CRIADO, event);
     }
 
     public void publicarCartaoAtivado(CartaoAtivadoEvent event) {
-        kafkaTemplate.send(TOPICO_CARTAO_ATIVADO, event);
+        cartaoAtivadoKafkaTemplate.send(TOPICO_CARTAO_ATIVADO, event);
     }
 
     public void publicarCartaoCancelado(CartaoCanceladoEvent event) {
-        kafkaTemplate.send(TOPICO_CARTAO_CANCELADO, event);
+        cartaoCanceladoKafkaTemplate.send(TOPICO_CARTAO_CANCELADO, event);
     }
 }

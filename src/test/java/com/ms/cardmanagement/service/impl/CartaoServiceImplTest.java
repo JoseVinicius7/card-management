@@ -82,7 +82,7 @@ class CartaoServiceImplTest {
         when(cartaoRepository.findById(1L)).thenReturn(Optional.empty());
 
         CartaoException exception = assertThrows(CartaoException.class, () -> service.ativarCartao(1L));
-        assertEquals("Cartão não encontrado para o ID: 1", exception.getMessage());
+        assertEquals("Cartão não encontrado.", exception.getMessage());
     }
 
     @Test
@@ -103,7 +103,7 @@ class CartaoServiceImplTest {
         when(cartaoRepository.findById(1L)).thenReturn(Optional.of(cartao));
 
         CartaoException exception = assertThrows(CartaoException.class, () -> service.cancelarCartao(1L));
-        assertEquals("Somente cartões ATIVOS podem ser cancelados.", exception.getMessage());
+        assertEquals("Cartão não está elegível para cancelamento.", exception.getMessage());
     }
 
     // Métodos auxiliares

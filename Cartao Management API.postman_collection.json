@@ -1,0 +1,80 @@
+{
+	"info": {
+		"_postman_id": "b9b9bfd4-df3f-40a9-b4f4-d51497a1a854",
+		"name": "Cartao Management API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "38851410"
+	},
+	"item": [
+		{
+			"name": "Criar Cartões",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"cpf\": \"12345678901\",\n  \"nomeImpresso\": \"José V. Santos\",\n  \"produto\": \"PLATINUM\",\n  \"subproduto\": \"SUB-001\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8080/cartoes",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"cartoes"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Ativar Cartão",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/cartoes/1/ativar",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"cartoes",
+						"1",
+						"ativar"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Cancelar Cartão",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8080/cartoes/1/cancelar",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"cartoes",
+						"1",
+						"cancelar"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
